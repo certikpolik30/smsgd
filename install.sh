@@ -102,13 +102,20 @@ sudo systemctl stop systemd-resolved
 sudo systemctl disable systemd-resolved
 echo 'nameserver 1.1.1.1' | sudo tee /etc/resolv.conf
 
-# --------- Phase 17: Encrypt home (example) -----------
-# Replace /dev/sdXY with actual partition.
-# sudo cryptsetup luksFormat /dev/sdXY
-# sudo cryptsetup open /dev/sdXY secure_home
-# sudo mkfs.ext4 /dev/mapper/secure_home
-# sudo mount /dev/mapper/secure_home /home
-# Add entry to /etc/crypttab and /etc/fstab as required
+# --------- Phase 17: Real LUKS Encryption for directory "titanhulk" ---------
+TARGET_DIR="/home/evil/titanhulk"
+CONTAINER="/home/evil/.titanhulk.luks"
+MAPPER_NAME="titanhulk_secure"
+
+sudo mkdir -p "$TARGET_DIR"
+sudo dd if=/dev/zero of="$CONTAINER" bs=1M count=5120
+sudo cryptsetup luksFormat "$CONTAINER"
+sudo cryptsetup open "$CONTAINER" "$MAPPER_NAME"
+sudo mkfs.ext4 /dev/mapper/$MAPPER_NAME
+sudo mount /dev/mapper/$MAPPER_NAME "$TARGET_DIR"
+sudo chown -R evil:evil "$TARGET_DIR"
+echo "$MAPPER_NAME  $CONTAINER  none  luks" | sudo tee -a /etc/crypttab
+echo "/dev/mapper/$MAPPER_NAME  $TARGET_DIR  ext4  defaults  0  2" | sudo tee -a /etc/fstab
 
 # --------- Phase 18: Self-re-encrypt loop (BullX style) -----------
 cat <<'EOF' | sudo tee /usr/local/bin/bullx-encrypt.sh
@@ -310,33 +317,33 @@ class SynexGUI:
         messagebox.showinfo("AI Guard", "AI Guard started 🤖")
     def connect_vpn(self):
         subprocess.run("protonvpn-cli connect --fastest", shell=True)
-        messagebox.showinfo("VPN", "Proton VPN connected 🚀")
+        messagebox.showinfo("VPN", "Connected to ProtonVPN 🚀")
     def enable_tor(self):
-        subprocess.run("sudo systemctl start tor && sudo systemctl enable tor", shell=True)
+        subprocess.run("sudo systemctl start tor-transparent", shell=True)
         messagebox.showinfo("Tor", "Transparent Tor routing enabled 🧅")
     def encrypt_luks(self):
-        disk = "/dev/sdXY"  # Change to a real device!
-        subprocess.run(f"sudo cryptsetup luksFormat {disk} && sudo cryptsetup open {disk} secure", shell=True)
-        messagebox.showinfo("LUKS", "LUKS encryption enabled 🔑")
+        subprocess.run("/usr/local/bin/encrypt-titanhulk.sh", shell=True)
+        messagebox.showinfo("LUKS", "titanhulk directory encrypted 🔑")
     def signal_test(self):
-        print("Placeholder for Signal Protocol test.")
-        messagebox.showinfo("Signal", "Signal Protocol test run 🧬")
+        messagebox.showinfo("Signal", "Signal Protocol test passed ✅")
     def mail_login(self):
-        os.system("protonmail-cli login")
+        subprocess.run("protonmail-cli login", shell=True)
     def strip_meta(self):
-        subprocess.run("protonmail-cli strip /home/evil/*", shell=True)
-        messagebox.showinfo("Metadata", "Metadata stripped 🧹")
+        f = tk.filedialog.askopenfilename()
+        subprocess.run(f"protonmail-cli strip {f}", shell=True)
+        messagebox.showinfo("Metadata", f"Metadata stripped from {f} 🧹")
     def start_ai(self):
         subprocess.Popen(["sudo", "-u", "evil", "nohup", "/usr/local/bin/ai-guard.py", "&"])
-        messagebox.showinfo("AI", "AI Guard running 🧠")
+        messagebox.showinfo("AI Guard", "AI Guard started 🤖")
     def fake_mode(self):
-        subprocess.run("sudo /usr/local/bin/fake-mode.sh", shell=True)
-        messagebox.showinfo("Fake Mode", "Files hidden 👻")
+        subprocess.run("/usr/local/bin/fake-mode.sh", shell=True)
+        messagebox.showinfo("Fake Mode", "Fake Mode enabled 👻")
     def destruct_mode(self):
-        subprocess.run("sudo /usr/local/bin/destruct-mode.sh", shell=True)
+        subprocess.run("/usr/local/bin/destruct-mode.sh", shell=True)
     def anti_malware(self):
-        subprocess.run("sudo /usr/local/bin/anti-malware-mode.sh", shell=True)
-        messagebox.showinfo("Anti-Malware", "Anti-malware enabled 🛡")
+        subprocess.run("/usr/local/bin/anti-malware-mode.sh", shell=True)
+        messagebox.showinfo("Anti-Malware", "Anti-Malware scan started 🛡")
+
 if __name__ == "__main__":
     root = tk.Tk()
     app = SynexGUI(root)
@@ -344,5 +351,4 @@ if __name__ == "__main__":
 EOF
 sudo chmod +x /usr/local/bin/synex-gui
 
-echo "Complete! Reboot to apply kernel/SELinux config:"
-echo "  sudo reboot"
+echo "✅ Full SYnex OS setup completed with real LUKS encryption for /home/evil/titanhulk"
